@@ -1,0 +1,81 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Vazirmatn', system-ui, sans-serif;
+  background-color: #ffffff;
+  color: #222222;
+  direction: rtl;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f4f4f4;
+}
+::-webkit-scrollbar-thumb {
+  background: #c0c0c0;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #FFD400;
+}
+
+/* Persian number formatting helper */
+.fa-num {
+  font-feature-settings: 'ss01';
+}
+
+/* Custom utilities */
+@layer components {
+  .btn-yellow {
+    @apply bg-auto-yellow text-auto-black font-bold rounded-xl px-6 py-3 transition-all hover:brightness-95 active:scale-95 inline-flex items-center justify-center gap-2;
+  }
+  .btn-outline {
+    @apply border-2 border-auto-yellow text-auto-yellow font-bold rounded-xl px-6 py-3 transition-all hover:bg-auto-yellow hover:text-auto-black inline-flex items-center justify-center gap-2;
+  }
+  .card {
+    @apply bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow;
+  }
+  .section-title {
+    @apply text-2xl md:text-3xl font-extrabold text-auto-black mb-6;
+  }
+  .input-field {
+    @apply w-full bg-auto-gray border-0 rounded-xl px-4 py-3 text-auto-dark placeholder-auto-muted focus:outline-none focus:ring-2 focus:ring-auto-yellow transition-all;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full;
+  }
+}
+
+/* Hide scrollbar for horizontal scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Skeleton animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}

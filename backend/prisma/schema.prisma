@@ -1,0 +1,589 @@
+// Prisma schema for Iranian Automotive Marketplace
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// === IDENTITY ===
+model User {
+  id          String   @id @default(cuid())
+  phone       String   @unique
+  email       String?
+  password    String
+  firstName   String?
+  lastName    String?
+  nationalId  String?
+  role        Role     @default(CUSTOMER)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  addresses   Address[]
+  orders      Order[]
+  reviews     Review[]
+  wishlists   Wishlist[]
+  tickets     SupportTicket[]
+  cart        Cart?
+  seller      Seller?
+  notifications Notification[]
+}
+
+enum Role {
+  SUPER_ADMIN
+  MARKETPLACE_ADMIN
+  FINANCE_MANAGER
+  PRODUCT_MANAGER
+  CUSTOMER_SUPPORT
+  SELLER
+  CUSTOMER
+}
+
+model Address {
+  id        String  @id @default(cuid())
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  province  String
+  city      String
+  address   String
+  postalCode String?
+  phone     String?
+  recipientName String?
+  isDefault Boolean @default(false)
+}
+
+// === SELLERS ===
+model Seller {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  storeName       String
+  slug            String   @unique
+  description     String?
+  logo            String?
+  coverImage      String?
+  location        String?
+  province        String?
+  city            String?
+  phone           String?
+  email           String?
+  businessType    String?
+  nationalId      String?
+  bankAccount     String?
+  rating          Float    @default(0)
+  reviewCount     Int      @default(0)
+  productCount    Int      @default(0)
+  isVerified      Boolean  @default(false)
+  status          SellerStatus @default(PENDING)
+  commissionRate  Float    @default(8)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  offers          SellerOffer[]
+  subOrders       SellerSubOrder[]
+  wallet          Wallet?
+  payouts         PayoutRequest[]
+  documents       SellerDocument[]
+  performance     SellerPerformance?
+}
+
+enum SellerStatus {
+  DRAFT
+  PENDING
+  NEEDS_DOCS
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+model SellerDocument {
+  id        String   @id @default(cuid())
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  type      String
+  fileUrl   String
+  status    String   @default("PENDING")
+  createdAt DateTime @default(now())
+}
+
+model SellerPerformance {
+  id              String  @id @default(cuid())
+  sellerId        String  @unique
+  seller          Seller  @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  fulfillmentRate Float  @default(0)
+  cancellationRate Float @default(0)
+  avgPrepTime     Float  @default(0)
+  responseTime    Float  @default(0)
+  returnRate      Float  @default(0)
+  satisfaction    Float  @default(0)
+}
+
+// === CATALOG ===
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children  Category[] @relation("CategoryHierarchy")
+  icon      String?
+  sortOrder Int        @default(0)
+  products  MasterProduct[]
+}
+
+model Brand {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  slug      String          @unique
+  logo      String?
+  products  MasterProduct[]
+}
+
+model MasterProduct {
+  id             String         @id @default(cuid())
+  name           String
+  slug           String         @unique
+  englishName    String?
+  sku            String         @unique
+  oemNumber      String?
+  manufacturerPartNumber String?
+  categoryId     String
+  category       Category       @relation(fields: [categoryId], references: [id])
+  brandId        String
+  brand          Brand          @relation(fields: [brandId], references: [id])
+  description    String?
+  specifications Json?
+  weight         Float?
+  dimensions     String?
+  warranty       String?
+  origin         String?
+  condition      String         @default("NEW")
+  availability   String         @default("IN_STOCK")
+  seoTitle       String?
+  seoDescription String?
+  image          String?
+  rating         Float          @default(0)
+  reviewCount    Int            @default(0)
+  isBestSeller   Boolean        @default(false)
+  isNew          Boolean        @default(false)
+  isFeatured     Boolean        @default(false)
+  isDiscounted   Boolean        @default(false)
+  isSpecial      Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  offers         SellerOffer[]
+  compatibilities ProductCompatibility[]
+  images         ProductImage[]
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   MasterProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int     @default(0)
+}
+
+model ProductCompatibility {
+  id         String @id @default(cuid())
+  productId  String
+  product    MasterProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  vehicleModelId String?
+  vehicleYear    String?
+  notes          String?
+}
+
+model SellerOffer {
+  id          String   @id @default(cuid())
+  productId   String
+  product     MasterProduct @relation(fields: [productId], references: [id])
+  sellerId    String
+  seller      Seller   @relation(fields: [sellerId], references: [id])
+  price       Int
+  originalPrice Int?
+  stock       Int      @default(0)
+  minOrderQty Int      @default(1)
+  prepTime    String?
+  warranty    String?
+  status      String   @default("ACTIVE")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime  @updatedAt
+  orderItems  OrderItem[]
+  inventory   Inventory?
+}
+
+model Inventory {
+  id        String @id @default(cuid())
+  offerId   String @unique
+  offer     SellerOffer @relation(fields: [offerId], references: [id])
+  quantity  Int    @default(0)
+  reserved  Int    @default(0)
+}
+
+// === VEHICLES ===
+model VehicleManufacturer {
+  id    String @id @default(cuid())
+  name  String @unique
+  slug  String @unique
+  models VehicleModel[]
+}
+
+model VehicleModel {
+  id            String   @id @default(cuid())
+  manufacturerId String
+  manufacturer   VehicleManufacturer @relation(fields: [manufacturerId], references: [id])
+  name          String
+  slug          String  @unique
+  generations   VehicleGeneration[]
+}
+
+model VehicleGeneration {
+  id        String @id @default(cuid())
+  modelId   String
+  model     VehicleModel @relation(fields: [modelId], references: [id])
+  name      String
+  trims     VehicleTrim[]
+}
+
+model VehicleTrim {
+  id          String @id @default(cuid())
+  generationId String
+  generation  VehicleGeneration @relation(fields: [generationId], references: [id])
+  name        String
+  years       VehicleYear[]
+}
+
+model VehicleYear {
+  id        String @id @default(cuid())
+  trimId    String
+  trim      VehicleTrim @relation(fields: [trimId], references: [id])
+  year      Int
+}
+
+// === COMMERCE ===
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  offerId   String?
+  productId String?
+  quantity  Int      @default(1)
+  price     Int
+}
+
+model Order {
+  id          String           @id @default(cuid())
+  orderNumber  String           @unique
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  status      OrderStatus      @default(PENDING)
+  totalAmount  Int
+  shippingCost Int
+  grandTotal  Int
+  addressId   String?
+  paymentStatus PaymentStatus  @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  subOrders   SellerSubOrder[]
+  history     OrderStatusHistory[]
+  payment     Payment?
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  PARTIALLY_REFUNDED
+}
+
+model SellerSubOrder {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sellerId    String
+  seller      Seller   @relation(fields: [sellerId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalAmount Int
+  shippingCost Int
+  trackingNumber String?
+  items       OrderItem[]
+  shipment    Shipment?
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  subOrderId  String
+  subOrder    SellerSubOrder @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
+  offerId     String?
+  offer       SellerOffer? @relation(fields: [offerId], references: [id])
+  productName String
+  productImage String?
+  price       Int
+  quantity    Int
+  total       Int
+  commission  Int
+  sellerNet   Int
+}
+
+model OrderStatusHistory {
+  id        String     @id @default(cuid())
+  orderId    String
+  order      Order      @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status     OrderStatus
+  note       String?
+  createdAt  DateTime   @default(now())
+}
+
+// === PAYMENTS ===
+model Payment {
+  id            String   @id @default(cuid())
+  orderId       String   @unique
+  order         Order    @relation(fields: [orderId], references: [id])
+  amount        Int
+  gateway       String?
+  reference     String?
+  status        PaymentStatus @default(PENDING)
+  createdAt      DateTime @default(now())
+  transactions  PaymentTransaction[]
+}
+
+model PaymentTransaction {
+  id        String   @id @default(cuid())
+  paymentId String
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  type      String
+  amount    Int
+  reference String?
+  status    String
+  createdAt DateTime @default(now())
+}
+
+model Wallet {
+  id              String   @id @default(cuid())
+  sellerId        String   @unique
+  seller          Seller   @relation(fields: [sellerId], references: [id])
+  availableBalance Int    @default(0)
+  pendingBalance  Int     @default(0)
+  transactions    WalletTransaction[]
+}
+
+model WalletTransaction {
+  id        String   @id @default(cuid())
+  walletId  String
+  wallet    Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  type      String
+  amount    Int
+  balance   Int
+  orderId   String?
+  description String?
+  createdAt  DateTime @default(now())
+}
+
+model PayoutRequest {
+  id        String   @id @default(cuid())
+  sellerId  String
+  seller    Seller   @relation(fields: [sellerId], references: [id])
+  amount    Int
+  bankAccount String
+  status    String   @default("REQUESTED")
+  adminNote String?
+  createdAt DateTime @default(now())
+  processedAt DateTime?
+}
+
+model CommissionRule {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  value       Float
+  categoryId  String?
+  sellerId    String?
+  productId   String?
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  createdAt  DateTime @default(now())
+}
+
+model CommissionTransaction {
+  id        String   @id @default(cuid())
+  sellerId  String
+  orderId   String
+  subOrderId String
+  amount    Int
+  rate      Float
+  createdAt DateTime @default(now())
+}
+
+// === LOGISTICS ===
+model Shipment {
+  id            String   @id @default(cuid())
+  subOrderId    String   @unique
+  subOrder      SellerSubOrder @relation(fields: [subOrderId], references: [id])
+  provider      String
+  trackingCode  String?
+  cost          Int
+  dispatchDate  DateTime?
+  status        String   @default("PENDING")
+  events        ShipmentTrackingEvent[]
+}
+
+model ShipmentTrackingEvent {
+  id         String   @id @default(cuid())
+  shipmentId String
+  shipment   Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status     String
+  location   String?
+  note       String?
+  createdAt  DateTime @default(now())
+}
+
+// === CUSTOMERS ===
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String?
+  sellerId  String?
+  rating    Int
+  comment   String?
+  isVerifiedPurchase Boolean @default(false)
+  createdAt DateTime @default(now())
+}
+
+model SupportTicket {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  subject   String
+  description String
+  status    String   @default("OPEN")
+  priority   String  @default("NORMAL")
+  createdAt DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// === MARKETING ===
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  ctaText   String?
+  ctaLink   String?
+  image     String?
+  position  String
+  isActive  Boolean  @default(true)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  type      String
+  value     Float
+  minOrder  Int?
+  maxUses   Int?
+  usedCount Int      @default(0)
+  isActive  Boolean  @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+  usages    CouponUsage[]
+}
+
+model CouponUsage {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id])
+  userId    String
+  orderId   String
+  usedAt    DateTime @default(now())
+}
+
+model NewsletterSubscriber {
+  id    String   @id @default(cuid())
+  email String   @unique
+  createdAt DateTime @default(now())
+}
+
+// === TRUST ===
+model ReturnRequest {
+  id        String   @id @default(cuid())
+  orderId   String
+  userId    String
+  reason    String
+  description String
+  status    String   @default("REQUESTED")
+  createdAt DateTime @default(now())
+}
+
+model Dispute {
+  id        String   @id @default(cuid())
+  orderId   String
+  sellerId  String
+  userId    String
+  reason    String
+  description String
+  status    String   @default("OPEN")
+  resolution String?
+  resolvedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+// === CONTENT ===
+model BlogPost {
+  id        String   @id @default(cuid())
+  title     String
+  slug      String   @unique
+  excerpt   String
+  content   String?
+  image     String?
+  category  String
+  publishedAt DateTime?
+  createdAt DateTime @default(now())
+}
+
+// === SETTINGS ===
+model StoreSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+}
